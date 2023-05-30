@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+import plotly.express as px 
 from PIL import Image
 
 # Charger les données
@@ -208,4 +209,84 @@ with st.sidebar:
 ##faire black à la fin du projet
 
 
-   
+########Diagramme à barres interactif
+#fig = px.bar(
+#   data_frame=data, y=data["code_categorie_d_emploi"].unique(),
+#   x="masse_salariale_nette", title="Évolution de la masse salariale par catégorie d'emplois"
+#)
+#st.plotly_chart(fig)
+
+#Nuage de points interactif
+numeric_cols = data.select_dtypes(include=["float", "int"]).columns.tolist()
+
+
+with st.empty():
+    var_x = st.selectbox("Choisissez la variable en abscisse", numeric_cols, key='var_x')
+
+with st.empty():
+    var_y = st.selectbox("Choisissez la variable en ordonnée", numeric_cols, key='var_y')
+with st.empty():
+    categorical_cols=data.select_dtypes(include=["float", "int"]).columns.tolist()
+    var_col= st.selectbox("variable pour colorier les points",categorical_cols)
+# Créer le nuage de points
+fig0 = px.scatter(
+    data_frame=data,
+    x=var_x,
+    y=var_y,
+    color=var_col,
+    title=f"{var_x} VS {var_y}"
+)
+
+# Afficher le nuage de points
+st.plotly_chart(fig0)
+#En utilisant la méthode container.key(), nous attribuons une clé unique à chaque widget st.selectbox, ce qui résout le problème des clés générées en double et évite l'erreur.
+
+
+###########carte
+#st.write(data.head(10))
+#st.map(data[['geom','geo_point_2d']])
+
+
+# Créer le diagramme à barres interactif avec Plotly Express
+total = data['masse_salariale_nette'].sum()
+data['masse salariale'] = total
+
+# Créer l'histogramme interactif avec Plotly Express
+fig1 = px.histogram(
+    data_frame=data,
+    x='type_d_emploi',
+    y='masse salariale',
+    nbins=10,
+    title="Repartition de la masse salariale par type d'emploi",
+    labels={'type_d_emploi': 'type_d_emploi', 'masse salariale': 'masse salariale'},
+    template='plotly_white'
+)
+
+# Afficher l'histogramme interactif avec Streamlit
+st.plotly_chart(fig1)
+
+
+######################### Afficher le diagramme à barres interactif 
+
+# Calculer les pourcentages
+total = data['nombre_d_employeurs'].sum()
+data['pourcentage'] = (data['nombre_d_employeurs'] / total) * 100
+
+# Créer l'histogramme interactif avec Plotly Express
+fig2 = px.histogram(
+    data_frame=data,
+    x='type_d_emploi',
+    y='pourcentage',
+    nbins=10,
+    title="Pourcentage d'employeur par type d'emploi",
+    labels={'type_d_emploi': 'type_d_emploi', 'pourcentage': 'Pourcentage'},
+    template='plotly_white'
+)
+
+# Afficher l'histogramme interactif avec Streamlit
+st.plotly_chart(fig2)
+
+
+
+
+
