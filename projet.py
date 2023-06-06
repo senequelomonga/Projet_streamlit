@@ -4,6 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.express as px 
 from PIL import Image
+import re
+import folium
+from streamlit_folium import st_folium
 
 # Charger les données
 @st.cache_data
@@ -216,7 +219,29 @@ with st.sidebar:
 #)
 #st.plotly_chart(fig)
 
+
+
+# Afficher la carte par region 
+
+
+data['longitude'] = data['geo_point_2d'].str.split(',', expand=True)[0]
+data['latitude'] = data['geo_point_2d'].str.split(',', expand=True)[1]
+##data['latitude'] = data['latitude'].astype(float)
+
+longitude = data[data["region"]==selection_region]["longitude"].values
+latitude = data[data["region"]==selection_region]["latitude"].values
+
+
+m = folium.Map(location=[longitude[0] , latitude[0]], zoom_start= 9)
+#folium.Marker(
+ #           [39.949610, -75.150282], popup="Liberty Bell", tooltip="Liberty Bell"
+ #       ).add_to(m)
+
+        # call to render Folium map in Streamlit
+st_data = st_folium(m, width=725)
+
 #Nuage de points interactif
+st.subheader("Nuage de points")
 numeric_cols = data.select_dtypes(include=["float", "int"]).columns.tolist()
 
 
@@ -284,9 +309,26 @@ fig2 = px.histogram(
 )
 
 # Afficher l'histogramme interactif avec Streamlit
-st.plotly_chart(fig2)
 
 
 
 
+
+
+# Create a map using Plotly Express
+#fig = px.scatter_mapbox(data=data, lat='latitude', lon='longitude')
+
+# Configure the map
+#fig.update_layout(mapbox_style="open-street-map")
+#fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+
+# Display the map on Streamlit
+#st.plotly_chart(fig)
+
+
+#############
+# Calculate the average age
+#average_age = "age_moyen_categ_x_dep", data["age_moyen_categ_x_dep"].mean()
+# Display the average age
+#st.metric("Average Age: {average_age}")
 
