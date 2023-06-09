@@ -362,6 +362,6 @@ with st.sidebar:
 #st.plotly_chart(fig)
 
 
-
+st.write
 
 
