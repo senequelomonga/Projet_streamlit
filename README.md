@@ -14,3 +14,5 @@ Les données sont ventilées par catégorie d'emploi (type d'emploi x dispositif
 - PAJE_AM (Assistantes maternelles - PAJE)
 
 Elles sont par ailleurs déclinées par département.
+
+![interface](./seneque.png)
