@@ -186,7 +186,7 @@ with tab1:
 
     m = folium.Map(location=[longitude[0] , latitude[0]], zoom_start= 9)
     #folium.Marker(
-    st_data = st_folium(m, width=725)
+    st_data = st_folium(m, width=925)
     
     #Nuage de points interactif
     st.subheader("Nuage de points")
@@ -362,6 +362,5 @@ with st.sidebar:
 #st.plotly_chart(fig)
 
 
-st.write
 
 
