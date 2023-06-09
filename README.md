@@ -15,4 +15,5 @@ Les données sont ventilées par catégorie d'emploi (type d'emploi x dispositif
 
 Elles sont par ailleurs déclinées par département.
 
+## Cycle de vie du projet
 ![interface](./seneque.png)
