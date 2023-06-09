@@ -8,6 +8,12 @@ import re
 import folium
 from streamlit_folium import st_folium
 
+st.set_page_config(
+    page_title="Streamlit project",
+    #page_icon=smiley_logo,
+    layout="wide",
+    initial_sidebar_state="expanded",)
+    
 # Charger les données
 @st.cache_data
 def load_data():
@@ -25,26 +31,30 @@ st.write(data.head())
 st.subheader("Dataset")
 
 # Onglets
-tab1, tab2, tab3,tab4 = st.tabs(["📈Insight Employeurs", "📊Insight Employés", "📝Glossaire","📃summary"])
+tab1, tab2, tab3 = st.tabs(["📈Insights","📝Glossaire","📃summary"])
 
 with tab1:
-    st.header("📈 Insight Employeurs")
-    col1, col2, col3 = st.columns(3)
+    st.header("📈 Insight")
+    col1, col2, col3, col4 = st.columns(4)
     col1.info("**Nombre d'employeurs**")
     col2.info("**Masse salariale nette**")
     col3.info("**Nombre total d'heures**")
+    col4.info("**Age moyen d'employés**")
     col1.metric("Nombre d'employeurs", data["nombre_d_employeurs"].sum())
     col2.metric("Masse_salariale_nette", data["masse_salariale_nette"].sum())
     col3.metric(
-        "Nombre total d'heures déclarées", data["nombre_d_heures_declarees"].sum()
+        "Nombre total d'heures déclarées", round(data["nombre_d_heures_declarees"].sum(),2)
     )
+    col4.metric("Average Age:", value = round(data["age_moyen_categ_x_dep"].mean(),2))
+    
+
     
      ############ cleaning liste region
     region_liste = [
         elem for elem in data["region"].unique() if "_non classé ailleurs_" not in elem
         ]
     #################### fin list region
-    print(region_liste)
+    #print(region_liste)
 
     ###### prepa slect box
     selection_region = st.selectbox("Séléctionner votre region", region_liste)
@@ -163,16 +173,115 @@ with tab1:
         #     st.write(data[data['region']=='Normandie']['nombre_d_employeurs'].sum())
             else:
                 st.write("Pas de region sélectionnée")
+                
+    # Afficher la carte par region 
+
+    data['longitude'] = data['geo_point_2d'].str.split(',', expand=True)[0]
+    data['latitude'] = data['geo_point_2d'].str.split(',', expand=True)[1]
+    ##data['latitude'] = data['latitude'].astype(float)
+
+    longitude = data[data["region"]==selection_region]["longitude"].values
+    latitude = data[data["region"]==selection_region]["latitude"].values
+
+
+    m = folium.Map(location=[longitude[0] , latitude[0]], zoom_start= 9)
+    #folium.Marker(
+    st_data = st_folium(m, width=725)
+    
+    #Nuage de points interactif
+    st.subheader("Nuage de points")
+    numeric_cols = data.select_dtypes(include=["float", "int"]).columns.tolist()
+
+
+    with st.empty():
+        var_x = st.selectbox("Choisissez la variable en abscisse", numeric_cols, key='var_x')
+
+    with st.empty():
+        var_y = st.selectbox("Choisissez la variable en ordonnée", numeric_cols, key='var_y')
+    with st.empty():
+        categorical_cols=data.select_dtypes(include=["float", "int"]).columns.tolist()
+        var_col= st.selectbox("variable pour colorier les points",categorical_cols)
+    # Créer le nuage de points
+    fig0 = px.scatter(
+        data_frame=data,
+        x=var_x,
+        y=var_y,
+        color=var_col,
+        title=f"{var_x} VS {var_y}"
+    )
+
+    # Afficher le nuage de points
+    st.plotly_chart(fig0)
+
+
+
+    # Créer le diagramme à barres interactif avec Plotly Express
+    total = data['masse_salariale_nette'].sum()
+    data['masse salariale'] = total
+
+    # Créer l'histogramme interactif avec Plotly Express
+    fig1 = px.histogram(
+        data_frame=data,
+        x='type_d_emploi',
+        y='masse salariale',
+        nbins=10,
+        title="Repartition de la masse salariale par type d'emploi",
+        labels={'type_d_emploi': 'type_d_emploi', 'masse salariale': 'masse salariale'},
+        template='plotly_white'
+    )
+
+    # Afficher l'histogramme interactif avec Streamlit
+    st.plotly_chart(fig1)
+
+
+
+    # Calculer les pourcentages
+    total = data['nombre_d_employeurs'].sum()
+    data['pourcentage'] = (data['nombre_d_employeurs'] / total) * 100
+
+    # Créer l'histogramme interactif avec Plotly Express
+    fig2 = px.histogram(
+        data_frame=data,
+        x='type_d_emploi',
+        y='pourcentage',
+        nbins=10,
+        title="Pourcentage d'employeur par type d'emploi",
+        labels={'type_d_emploi': 'type_d_emploi', 'pourcentage': 'Pourcentage'},
+        template='plotly_white'
+    )
+
+
+
+
+
+
+
+    chart_data = pd.DataFrame(
+        np.random.randn(20, 2),
+        columns=['nombre_d_heures_declarees', 'masse_salariale_nette'])
+
+    st.line_chart(chart_data)
+    
 
 with tab2:
-    st.header("📊 Insight Employés")
-    st.write("test")
-
-with tab3:
     st.header("📝 Glossaire")
     st.write("test")
+    st.info(
+            """
+            Données sur les particuliers employeurs en 2018 issues des dispositifs Cesu et Pajemploi.
+            Année 2018.
 
-with tab4:
+            Source : Acoss-Urssaf, CnCesu, Centre Pajemploi
+
+            Les données sont ventilées par catégorie d'emploi (type d'emploi x dispositif déclaratif) :
+            
+            1. **CESU_HGED :** Hors garde d'enfant - CESU). 
+            2. **PAJE_GED** Garde d'enfant à domicile - PAJE.
+            3. **PAJE_AM** Assistantes maternelles - PAJE.
+            """,
+        )
+
+with tab3:
     st.header("📃 Summary")
     st.info(data)
     st.write("Nombre de colonnes :", data.shape[1])
@@ -189,6 +298,18 @@ with tab4:
 
     st.warning(f"Nombre total de valeurs manquantes : {missing_values}")
 
+    txt = st.text_area('Traitement du Dataset', '''Lors du traitement d'un dataset contenant des valeurs manquantes, il est important de suivre quelques étapes clés pour les gérer de manière appropriée. Voici un résumé des étapes courantes dans le traitement des valeurs manquantes dans un dataset :
+
+    1. Identification des valeurs manquantes 
+    2. Analyse de la nature des valeurs manquantes 
+    3. Évaluation de l'impact des valeurs manquantes 
+    4. Suppression des valeurs manquantes 
+    5. Imputation des valeurs manquantes 
+    6. Création d'indicateurs de valeurs manquantes 
+    7. Validation du dataset traité 
+    Il convient de noter que le traitement des valeurs manquantes peut varier en fonction du contexte et des exigences spécifiques du projet. Il est essentiel d'adapter ces étapes en fonction de votre propre dataset et de l'objectif de votre analyse ou modèle.
+    ''')
+    st.write('Dataset:', (txt))
  
 
 # main function
@@ -202,6 +323,27 @@ with st.sidebar:
                         """,
             unsafe_allow_html=True,
         )
+       
+       # Lien Linkedin 
+        lien = "https://www.linkedin.com/in/s%C3%A9n%C3%A8que-lomonga-146448a2/"  
+        
+        st.sidebar.markdown(
+    f"""
+    <p style='text-align: center;'><a href="{lien}" target="_blank">🚹Mon profil Linkedin</a></p>
+    """,
+    unsafe_allow_html=True
+        )
+        
+        # Lien Github
+        lien = "https://github.com/senequelomonga"  
+        
+        st.sidebar.markdown(
+    f"""
+    <p style='text-align: center;'><a href="{lien}" target="_blank">🚹Mon profil Github</a></p>
+    """,
+    unsafe_allow_html=True
+        )
+
         st.info(
             "Données sur les particuliers employeurs en 2020 issues des dispositifs Cesu, Pajemploi et DNS.Année 2020."
         )
@@ -221,114 +363,5 @@ with st.sidebar:
 
 
 
-# Afficher la carte par region 
 
-
-data['longitude'] = data['geo_point_2d'].str.split(',', expand=True)[0]
-data['latitude'] = data['geo_point_2d'].str.split(',', expand=True)[1]
-##data['latitude'] = data['latitude'].astype(float)
-
-longitude = data[data["region"]==selection_region]["longitude"].values
-latitude = data[data["region"]==selection_region]["latitude"].values
-
-
-m = folium.Map(location=[longitude[0] , latitude[0]], zoom_start= 9)
-#folium.Marker(
- #           [39.949610, -75.150282], popup="Liberty Bell", tooltip="Liberty Bell"
- #       ).add_to(m)
-
-        # call to render Folium map in Streamlit
-st_data = st_folium(m, width=725)
-
-#Nuage de points interactif
-st.subheader("Nuage de points")
-numeric_cols = data.select_dtypes(include=["float", "int"]).columns.tolist()
-
-
-with st.empty():
-    var_x = st.selectbox("Choisissez la variable en abscisse", numeric_cols, key='var_x')
-
-with st.empty():
-    var_y = st.selectbox("Choisissez la variable en ordonnée", numeric_cols, key='var_y')
-with st.empty():
-    categorical_cols=data.select_dtypes(include=["float", "int"]).columns.tolist()
-    var_col= st.selectbox("variable pour colorier les points",categorical_cols)
-# Créer le nuage de points
-fig0 = px.scatter(
-    data_frame=data,
-    x=var_x,
-    y=var_y,
-    color=var_col,
-    title=f"{var_x} VS {var_y}"
-)
-
-# Afficher le nuage de points
-st.plotly_chart(fig0)
-#En utilisant la méthode container.key(), nous attribuons une clé unique à chaque widget st.selectbox, ce qui résout le problème des clés générées en double et évite l'erreur.
-
-
-###########carte
-#st.write(data.head(10))
-#st.map(data[['geom','geo_point_2d']])
-
-
-# Créer le diagramme à barres interactif avec Plotly Express
-total = data['masse_salariale_nette'].sum()
-data['masse salariale'] = total
-
-# Créer l'histogramme interactif avec Plotly Express
-fig1 = px.histogram(
-    data_frame=data,
-    x='type_d_emploi',
-    y='masse salariale',
-    nbins=10,
-    title="Repartition de la masse salariale par type d'emploi",
-    labels={'type_d_emploi': 'type_d_emploi', 'masse salariale': 'masse salariale'},
-    template='plotly_white'
-)
-
-# Afficher l'histogramme interactif avec Streamlit
-st.plotly_chart(fig1)
-
-
-######################### Afficher le diagramme à barres interactif 
-
-# Calculer les pourcentages
-total = data['nombre_d_employeurs'].sum()
-data['pourcentage'] = (data['nombre_d_employeurs'] / total) * 100
-
-# Créer l'histogramme interactif avec Plotly Express
-fig2 = px.histogram(
-    data_frame=data,
-    x='type_d_emploi',
-    y='pourcentage',
-    nbins=10,
-    title="Pourcentage d'employeur par type d'emploi",
-    labels={'type_d_emploi': 'type_d_emploi', 'pourcentage': 'Pourcentage'},
-    template='plotly_white'
-)
-
-# Afficher l'histogramme interactif avec Streamlit
-
-
-
-
-
-
-# Create a map using Plotly Express
-#fig = px.scatter_mapbox(data=data, lat='latitude', lon='longitude')
-
-# Configure the map
-#fig.update_layout(mapbox_style="open-street-map")
-#fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-
-# Display the map on Streamlit
-#st.plotly_chart(fig)
-
-
-#############
-# Calculate the average age
-#average_age = "age_moyen_categ_x_dep", data["age_moyen_categ_x_dep"].mean()
-# Display the average age
-#st.metric("Average Age: {average_age}")
 
